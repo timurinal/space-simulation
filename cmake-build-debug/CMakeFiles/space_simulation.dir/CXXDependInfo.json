@@ -1,0 +1,27 @@
+{
+	"bmi-installation" : null,
+	"compiler-frontend-variant" : "GNU",
+	"compiler-id" : "GNU",
+	"compiler-simulate-id" : "",
+	"config" : "Debug",
+	"cxx-modules" : {},
+	"database-info" : null,
+	"dir-cur-bld" : "/home/timuri/CLionProjects/space-simulation/cmake-build-debug",
+	"dir-cur-src" : "/home/timuri/CLionProjects/space-simulation",
+	"dir-top-bld" : "/home/timuri/CLionProjects/space-simulation/cmake-build-debug",
+	"dir-top-src" : "/home/timuri/CLionProjects/space-simulation",
+	"exports" : [],
+	"forward-modules-from-target-dirs" : [],
+	"include-dirs" : [],
+	"language" : "CXX",
+	"linked-target-dirs" : [],
+	"module-dir" : "/home/timuri/CLionProjects/space-simulation/cmake-build-debug/CMakeFiles/space_simulation.dir",
+	"sources" : 
+	{
+		"CMakeFiles/space_simulation.dir/main.cpp.o" : 
+		{
+			"language" : "CXX",
+			"source" : "/home/timuri/CLionProjects/space-simulation/main.cpp"
+		}
+	}
+}
