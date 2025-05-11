@@ -14,6 +14,9 @@ add_library(glad "${GLAD_PATH}/src/glad.c")
 include_directories("${GLAD_PATH}/include")
 
 include_directories("external")
+include_directories("external/glm")
+
+include_directories("src/includes")
 
 find_package(OpenGL REQUIRED)
 
@@ -22,7 +25,22 @@ if(UNIX)
     include_directories(${X11_INCLUDE_DIR})
 endif()
 
-add_executable(space-simulation main.cpp)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_definitions(-DRELEASE)
+endif()
+
+
+add_executable(space-simulation src/main.cpp
+        src/includes/shader.h
+        src/rendering/shader.cpp
+        src/includes/camera.h
+        src/includes/billboard.h
+        src/rendering/billboard.cpp
+        src/includes/celestialBody.h
+        src/celestialBody.cpp
+)
 
 if(UNIX)
     target_link_libraries(space-simulation glfw glad ${OPENGL_LIBRARIES} ${X11_LIBRARIES})
