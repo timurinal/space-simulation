@@ -4,7 +4,7 @@
 #include <bits/unique_ptr.h>
 #include <glm/glm.hpp>
 
-#include "billboard.h"
+#include "octahedron.h"
 
 struct CelestialBody {
     double mass;
@@ -17,16 +17,18 @@ struct CelestialBody {
     const unsigned int instanceId;
     static unsigned int nextId;
 
-    std::unique_ptr<Billboard> gfx;
+    Material material;
+    std::unique_ptr<Octahedron> gfx;
 
-    CelestialBody(double mass, double radius, double surfaceGravity, glm::vec3 position, glm::vec3 velocity)
+    CelestialBody(double mass, double radius, double surfaceGravity, glm::vec3 position, glm::vec3 velocity, Material material)
         : mass(mass),
           radius(radius),
           surfaceGravity(surfaceGravity),
           position(position),
           velocity(velocity),
           instanceId(nextId++),
-          gfx(std::make_unique<Billboard>(position, radius)) {
+          gfx(std::make_unique<Octahedron>(position, radius)) {
+        this->material = material;
     }
 
     CelestialBody(const CelestialBody &other) = delete; // Disable copying
@@ -38,13 +40,12 @@ struct CelestialBody {
 
     ~CelestialBody() = default;
 
-    void draw(const glm::mat4 &view,
-              const glm::mat4 &proj,
+    void draw(const glm::mat4 &worldToClip,
               const glm::vec3 &cameraPos,
               const glm::vec3 &lightPosWS,
               const glm::vec3 &lightColour) {
         gfx->setPosition(position);
-        gfx->draw(view, proj, cameraPos, lightPosWS, lightColour);
+        gfx->draw(worldToClip, cameraPos, material, lightPosWS, lightColour);
     }
 };
 

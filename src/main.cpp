@@ -7,6 +7,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/random.hpp>
@@ -14,6 +17,7 @@
 #include "billboard.h"
 #include "camera.h"
 #include "celestialBody.h"
+#include "octahedron.h"
 #include "shader.h"
 
 glm::ivec2 WindowSize = glm::ivec2(1280, 720);
@@ -40,6 +44,8 @@ std::vector<CelestialBody> Bodies;
 std::atomic<float> gTimeScale { 1.0f };   // 1 = real‑time; 2 = 2× faster; …
 
 const static float GravitationalConstant = 0.1;
+
+unsigned int RenderMode = 0;
 
 void updatePhysics()
 {
@@ -137,7 +143,7 @@ int main() {
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glFrontFace(GL_CW);
+    glFrontFace(GL_CCW);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -150,10 +156,41 @@ int main() {
     MainCamera->setRotation(90, 0);
 
     Billboard::InitialiseShared("../runtime/shaders/planet-billboard.vert", "../runtime/shaders/planet-billboard.frag");
+
+    Octahedron::InitialiseShared(7, "../runtime/shaders/octahedron.vert", "../runtime/shaders/octahedron.frag");
+
+    stbi_set_flip_vertically_on_load(1);
+
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load("../runtime/textures/planet-diffuse-specular.png", &width, &height, &nrChannels, 0);
+
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        throw std::runtime_error("Failed to load texture");
+    }
+
+    stbi_image_free(data);
+
     Bodies.reserve(10);
-    Bodies.emplace_back(20000, 20, 9.81f, glm::vec3(0), glm::vec3(0));
-    Bodies.emplace_back(1, 5, 9.81f, glm::vec3(100,0,0), glm::vec3(0,0,5));
-    Bodies.emplace_back(1, 5, 9.81f, glm::vec3(0,100,0), glm::vec3(5,0,0));
+
+    Material sun { glm::vec3(1, 1, 0) };
+    sun.emissive = true;
+    sun.emission = glm::vec4(1, 1, 1, 1);
+    Material planet { glm::vec3(1, 1, 1) };
+    planet.albedoTexture = texture;
+
+    Bodies.emplace_back(2000, 20, 9.81f, glm::vec3(0), glm::vec3(0), sun);
+    Bodies.emplace_back(1, 5, 9.81f, glm::vec3(100,0,0), glm::vec3(0,0,1.3), planet);
 
     float lastFrameTime = 0;
     float nextFpsUpdateTime = 0;
@@ -182,11 +219,13 @@ int main() {
 
         MainCamera->update();
 
+        if (RenderMode == 0) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        else if (RenderMode == 1) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
         for (auto& body : Bodies) {
-            body.draw(MainCamera->getViewMatrix(),
-               MainCamera->getProjectionMatrix(),
+            body.draw(MainCamera->worldToClip(),
                MainCamera->Position,
-               /* lightPosWS */ glm::vec3(0),
+               /* lightPosWS */ Bodies[0].position,
                /* lightColour*/ glm::vec3(1));
         }
 
@@ -263,6 +302,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, GLFW_TRUE);
 
+    if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) RenderMode = 0;
+    if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) RenderMode = 1;
+
     auto offset = glm::vec3(0);
 
     const float moveSpeed = 5.0f;
@@ -278,7 +320,7 @@ void processInput(GLFWwindow* window) {
 
     MainCamera->move(offset);
 
-    float step = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ? 5.0f : 0.5f;                    // change per key‑press
+    float step = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ? 50.0f : glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ? 5.0f : 0.5f;                    // change per key‑press
     static bool plusHeld = false, minusHeld = false;
 
     // Increase time‑scale (KP + or '=' key)
@@ -287,7 +329,7 @@ void processInput(GLFWwindow* window) {
     {
         if (!plusHeld)
         {
-            gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0f, 256.0f);
+            gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0f, 500.0f);
             plusHeld = true;
         }
     }

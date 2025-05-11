@@ -40,6 +40,11 @@ add_executable(space-simulation src/main.cpp
         src/rendering/billboard.cpp
         src/includes/celestialBody.h
         src/celestialBody.cpp
+        src/includes/octahedron.h
+        src/rendering/octahedron.cpp
+        src/includes/vertex.h
+        external/stb/stb_image.h
+        src/includes/material.h
 )
 
 if(UNIX)

@@ -45,7 +45,7 @@ void main()
     float atten  = 1.0 / (dist * dist);                       // 1/r² fall‑off
 
     float NdotL  = max(dot(normalWS, L), 0.4);
-    vec3  diffuse= NdotL * lightColour;
+    vec3  diffuse= NdotL * lightColour * (normalWS * 0.5 + 0.5);
 
     fragColour   = diffuse;   // add ambient / specular as desired
 
