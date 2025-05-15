@@ -27,12 +27,13 @@ double lastX, lastY;
 
 static float DeltaTime = 0;
 
-Camera* MainCamera;
+Camera *MainCamera;
 
-void processInput(GLFWwindow* window);
+void processInput(GLFWwindow *window);
 
-void framebuffer_resized(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void framebuffer_resized(GLFWwindow *window, int width, int height);
+
+void mouse_callback(GLFWwindow *window, double xpos, double ypos);
 
 #if DEBUG
 void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum severity,
@@ -41,48 +42,72 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
 
 std::vector<CelestialBody> Bodies;
 
-std::atomic<float> gTimeScale { 1.0f };   // 1 = real‑time; 2 = 2× faster; …
+std::atomic<float> gTimeScale{1.0f}; // 1 = real‑time; 2 = 2× faster; …
+
+int RelativeBodyIndex = 0;
+
+bool RenderGrid = true;
 
 const static float GravitationalConstant = 0.1;
 
 unsigned int RenderMode = 0;
 
-void updatePhysics()
-{
-    using clock = std::chrono::high_resolution_clock;
-    auto lastFrameTime = clock::now();
+void updatePhysics() {
+    const float fixedTimeStep = 1.0f / 500;
+    float accumulator = 0.0f;
+    auto lastTime = std::chrono::high_resolution_clock::now();
 
-    while (true)
-    {
-        auto currentTime = clock::now();
-        float dt = std::chrono::duration<float>(currentTime - lastFrameTime).count();
-        lastFrameTime = currentTime;
+    while (true) {
+        auto now = std::chrono::high_resolution_clock::now();
+        float frameTime = std::chrono::duration<float>(now - lastTime).count();
+        lastTime = now;
 
-        dt *= gTimeScale.load(std::memory_order_relaxed);   // ★ time‑warp
+        frameTime = std::min(frameTime, 0.05f); // safety if frameTime spikes
 
-        if (dt > 0.0f)
-        {
-            for (auto& body : Bodies)
-            {
-                for (auto& other : Bodies)
-                {
-                    if (body.instanceId != other.instanceId) {
-                        float sqrDst = glm::length2(other.position - body.position);
-                        glm::vec3 forceDir = glm::normalize(other.position - body.position);
-                        glm::vec3 force = forceDir * GravitationalConstant * glm::vec3(body.mass * other.mass) / sqrDst;
-                        glm::vec3 acceleration = force / glm::vec3(body.mass);
-                        body.velocity += acceleration * dt;
+        frameTime *= gTimeScale.load(std::memory_order_relaxed);
+        accumulator += frameTime;
+
+        while (accumulator >= fixedTimeStep) {
+            if (frameTime > 0.0f) {
+                // Use shadow copies
+                std::vector<glm::vec3> positions;
+                std::vector<glm::vec3> velocities;
+
+                for (const auto &body: Bodies) {
+                    positions.push_back(body.position);
+                    velocities.push_back(body.velocity);
+                }
+
+                // 1. Compute forces using frozen positions
+                std::vector<glm::vec3> newVelocities = velocities;
+                for (size_t i = 0; i < Bodies.size(); ++i) {
+                    for (size_t j = 0; j < Bodies.size(); ++j) {
+                        if (i == j) continue;
+
+                        glm::vec3 dir = positions[j] - positions[i];
+                        float sqrDist = glm::length2(dir);
+
+                        if (sqrDist > 0.0001f) {
+                            // prevent division by zero
+                            glm::vec3 forceDir = glm::normalize(dir);
+                            glm::vec3 force = forceDir * GravitationalConstant *
+                                              static_cast<float>((Bodies[i].mass * Bodies[j].mass)) / sqrDist;
+
+                            glm::vec3 acceleration = force / static_cast<float>(Bodies[i].mass);
+                            newVelocities[i] += acceleration * fixedTimeStep;
+                        }
                     }
+                }
+
+                // 2. Update bodies with new velocities and positions
+                for (size_t i = 0; i < Bodies.size(); ++i) {
+                    Bodies[i].position += Bodies[i].velocity * fixedTimeStep;
+                    Bodies[i].velocity = newVelocities[i];
                 }
             }
 
-            for (auto& body : Bodies)
-            {
-                body.position += body.velocity * dt;
-            }
+            accumulator -= fixedTimeStep;
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
@@ -110,7 +135,7 @@ int main() {
 
     glfwSwapInterval(0);
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         throw std::runtime_error("[GLFW] Failed to initialise GLAD");
     }
 
@@ -122,9 +147,9 @@ int main() {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 #if DEBUG
-    int flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT)
-    {
+    int flags;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(glDebugOutput, nullptr);
@@ -134,8 +159,8 @@ int main() {
 
     glViewport(0, 0, 1280, 720);
 
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    // glClearColor(0, 0, 0, 1.0f);
+    // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(0, 0, 0, 1.0f);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -152,8 +177,8 @@ int main() {
     glGenVertexArrays(1, &gridVao);
 
     MainCamera = new Camera(1280.0 / 720.0);
-    MainCamera->setPosition(glm::vec3(0, 5, -10));
-    MainCamera->setRotation(90, 0);
+    MainCamera->setPosition(glm::vec3(0, 100, 0));
+    MainCamera->setRotation(-90, -90);
 
     Billboard::InitialiseShared("../runtime/shaders/planet-billboard.vert", "../runtime/shaders/planet-billboard.frag");
 
@@ -162,7 +187,7 @@ int main() {
     stbi_set_flip_vertically_on_load(1);
 
     int width, height, nrChannels;
-    unsigned char* data = stbi_load("../runtime/textures/planet-diffuse-specular.png", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load("../runtime/textures/planet-diffuse-specular.png", &width, &height, &nrChannels, 0);
 
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -183,14 +208,16 @@ int main() {
 
     Bodies.reserve(10);
 
-    Material sun { glm::vec3(1, 1, 0) };
+    Material sun{glm::vec3(1, 1, 0)};
     sun.emissive = true;
     sun.emission = glm::vec4(1, 1, 1, 1);
-    Material planet { glm::vec3(1, 1, 1) };
+    Material planet{glm::vec3(1, 1, 1)};
     planet.albedoTexture = texture;
+    Material mars{glm::vec3(153,42,2)/255.0f};
 
-    Bodies.emplace_back(2000, 20, 9.81f, glm::vec3(0), glm::vec3(0), sun);
-    Bodies.emplace_back(1, 5, 9.81f, glm::vec3(100,0,0), glm::vec3(0,0,1.3), planet);
+    Bodies.emplace_back("Sun", 15000, 10, 9.81f, glm::vec3(0), glm::vec3(0), sun);
+    Bodies.emplace_back("Earth", 100, 2, 9.81f, glm::vec3(50, 0, 0), glm::vec3(0, 0, 5), planet);
+    Bodies.emplace_back("Mars", 75, 1.5, 9.81f, glm::vec3(100, 0, 0), glm::vec3(0, 0, 3.5), mars);
 
     float lastFrameTime = 0;
     float nextFpsUpdateTime = 0;
@@ -219,47 +246,52 @@ int main() {
 
         MainCamera->update();
 
-        if (RenderMode == 0) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        else if (RenderMode == 1) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        if (RenderMode == 0)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        else if (RenderMode == 1)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        for (auto& body : Bodies) {
+        for (auto &body: Bodies) {
             body.draw(MainCamera->worldToClip(),
-               MainCamera->Position,
-               /* lightPosWS */ Bodies[0].position,
-               /* lightColour*/ glm::vec3(1));
+                      MainCamera->Position,
+                      /* lightPosWS */ Bodies[0].position - Bodies[RelativeBodyIndex].position,
+                      /* lightColour*/ glm::vec3(1),
+                      Bodies[RelativeBodyIndex].position);
         }
 
         // Render the grid last as it uses transparency
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (RenderGrid) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        glEnable(GL_BLEND);
-        glDisable(GL_CULL_FACE);
+            glEnable(GL_BLEND);
+            glDisable(GL_CULL_FACE);
 
-        gridShader.bind();
-        gridShader.setMat4("proj", MainCamera->getProjectionMatrix());
-        gridShader.setMat4("inv_proj", MainCamera->getInvProjectionMatrix());
-        gridShader.setMat4("view", MainCamera->getViewMatrix());
-        gridShader.setMat4("inv_view", MainCamera->getInvViewMatrix());
-        gridShader.setVec3("cameraPos", MainCamera->Position);
-        gridShader.setFloat("nearPlane", 0.001f);
-        gridShader.setFloat("farPlane", 1000.0f);
-        glBindVertexArray(gridVao);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
+            gridShader.bind();
+            gridShader.setMat4("proj", MainCamera->getProjectionMatrix());
+            gridShader.setMat4("inv_proj", MainCamera->getInvProjectionMatrix());
+            gridShader.setMat4("view", MainCamera->getViewMatrix());
+            gridShader.setMat4("inv_view", MainCamera->getInvViewMatrix());
+            gridShader.setVec3("cameraPos", MainCamera->Position);
+            gridShader.setFloat("nearPlane", 0.001f);
+            gridShader.setFloat("farPlane", 1000.0f);
+            glBindVertexArray(gridVao);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(0);
 
-        glDisable(GL_BLEND);
-        glEnable(GL_CULL_FACE);
+            glDisable(GL_BLEND);
+            glEnable(GL_CULL_FACE);
 
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, WindowSize.x, WindowSize.y);
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, WindowSize.x, WindowSize.y);
+        }
 
         // std::cout << "Camera Position: (" << MainCamera->Position.x << ", " << MainCamera->Position.y << ", " << MainCamera->Position.z << ") Rotation: (" << MainCamera->Yaw << ", " << MainCamera->Pitch << ")" << std::endl;
 
         glfwSwapBuffers(window);
 
         std::ostringstream title;
-        title << frameTime << " ms (" << fps << " fps)  ×" << gTimeScale.load();
+        title << frameTime << " ms (" << fps << " fps)  ×" << gTimeScale.load() << " | Rendering relative to body: " << Bodies[RelativeBodyIndex].name;
         glfwSetWindowTitle(window, title.str().c_str());
     }
 
@@ -279,9 +311,8 @@ void framebuffer_resized(GLFWwindow *window, int width, int height) {
     MainCamera->setAspect(aspect);
 }
 
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-    if (firstMouse)
-    {
+void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
+    if (firstMouse) {
         firstMouse = false;
         lastX = xpos;
         lastY = ypos;
@@ -299,7 +330,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     MainCamera->rotate(xoffset, yoffset);
 }
 
-void processInput(GLFWwindow* window) {
+void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, GLFW_TRUE);
 
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) RenderMode = 0;
@@ -308,7 +339,7 @@ void processInput(GLFWwindow* window) {
     auto offset = glm::vec3(0);
 
     const float moveSpeed = 5.0f;
-    const float fastSpeed = 15.0f;
+    const float fastSpeed = 50.0f;
     float speed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? fastSpeed : moveSpeed;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) offset += MainCamera->Front * (speed * DeltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) offset -= MainCamera->Front * (speed * DeltaTime);
@@ -320,32 +351,53 @@ void processInput(GLFWwindow* window) {
 
     MainCamera->move(offset);
 
-    float step = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ? 50.0f : glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ? 5.0f : 0.5f;                    // change per key‑press
+    float step = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
+                     ? 50.0f
+                     : glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS
+                           ? 5.0f
+                           : 0.5f; // change per key‑press
     static bool plusHeld = false, minusHeld = false;
 
     // Increase time‑scale (KP + or '=' key)
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_EQUAL)  == GLFW_PRESS)
-    {
-        if (!plusHeld)
-        {
+        glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
+        if (!plusHeld) {
             gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0f, 500.0f);
             plusHeld = true;
         }
-    }
-    else plusHeld = false;
+    } else plusHeld = false;
 
     // Decrease time‑scale (KP - or '-' key)
     if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS ||
-        glfwGetKey(window, GLFW_KEY_MINUS)       == GLFW_PRESS)
-    {
-        if (!minusHeld)
-        {
+        glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) {
+        if (!minusHeld) {
             gTimeScale = glm::max(0.0f, gTimeScale.load() - step);
             minusHeld = true;
         }
+    } else minusHeld = false;
+
+
+    static bool tabKeyHeld = false;
+
+    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+        if (!tabKeyHeld) {
+            RelativeBodyIndex = (RelativeBodyIndex + 1) % Bodies.size();
+            tabKeyHeld = true;
+        }
+    } else {
+        tabKeyHeld = false;
     }
-    else minusHeld = false;
+
+    static bool gKeyHeld = false;
+
+    if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
+        if (!gKeyHeld) {
+            RenderGrid = !RenderGrid;
+            gKeyHeld = true;
+        }
+    } else {
+        gKeyHeld = false;
+    }
 }
 
 #if DEBUG
@@ -356,44 +408,62 @@ void APIENTRY glDebugOutput(GLenum source,
                             GLenum severity,
                             GLsizei length,
                             const char *message,
-                            const void *userParam)
-{
+                            const void *userParam) {
     // ignore non-significant error/warning codes
-    if(id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
+    if (id == 131169 || id == 131185 || id == 131218 || id == 131204) return;
 
     std::cout << "---------------" << std::endl;
-    std::cout << "Debug message (" << id << "): " <<  message << std::endl;
+    std::cout << "Debug message (" << id << "): " << message << std::endl;
 
-    switch (source)
-    {
-        case GL_DEBUG_SOURCE_API:             std::cout << "Source: API"; break;
-        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   std::cout << "Source: Window System"; break;
-        case GL_DEBUG_SOURCE_SHADER_COMPILER: std::cout << "Source: Shader Compiler"; break;
-        case GL_DEBUG_SOURCE_THIRD_PARTY:     std::cout << "Source: Third Party"; break;
-        case GL_DEBUG_SOURCE_APPLICATION:     std::cout << "Source: Application"; break;
-        case GL_DEBUG_SOURCE_OTHER:           std::cout << "Source: Other"; break;
-    } std::cout << std::endl;
+    switch (source) {
+        case GL_DEBUG_SOURCE_API: std::cout << "Source: API";
+            break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM: std::cout << "Source: Window System";
+            break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER: std::cout << "Source: Shader Compiler";
+            break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY: std::cout << "Source: Third Party";
+            break;
+        case GL_DEBUG_SOURCE_APPLICATION: std::cout << "Source: Application";
+            break;
+        case GL_DEBUG_SOURCE_OTHER: std::cout << "Source: Other";
+            break;
+    }
+    std::cout << std::endl;
 
-    switch (type)
-    {
-        case GL_DEBUG_TYPE_ERROR:               std::cout << "Type: Error"; break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: std::cout << "Type: Deprecated Behaviour"; break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  std::cout << "Type: Undefined Behaviour"; break;
-        case GL_DEBUG_TYPE_PORTABILITY:         std::cout << "Type: Portability"; break;
-        case GL_DEBUG_TYPE_PERFORMANCE:         std::cout << "Type: Performance"; break;
-        case GL_DEBUG_TYPE_MARKER:              std::cout << "Type: Marker"; break;
-        case GL_DEBUG_TYPE_PUSH_GROUP:          std::cout << "Type: Push Group"; break;
-        case GL_DEBUG_TYPE_POP_GROUP:           std::cout << "Type: Pop Group"; break;
-        case GL_DEBUG_TYPE_OTHER:               std::cout << "Type: Other"; break;
-    } std::cout << std::endl;
+    switch (type) {
+        case GL_DEBUG_TYPE_ERROR: std::cout << "Type: Error";
+            break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: std::cout << "Type: Deprecated Behaviour";
+            break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: std::cout << "Type: Undefined Behaviour";
+            break;
+        case GL_DEBUG_TYPE_PORTABILITY: std::cout << "Type: Portability";
+            break;
+        case GL_DEBUG_TYPE_PERFORMANCE: std::cout << "Type: Performance";
+            break;
+        case GL_DEBUG_TYPE_MARKER: std::cout << "Type: Marker";
+            break;
+        case GL_DEBUG_TYPE_PUSH_GROUP: std::cout << "Type: Push Group";
+            break;
+        case GL_DEBUG_TYPE_POP_GROUP: std::cout << "Type: Pop Group";
+            break;
+        case GL_DEBUG_TYPE_OTHER: std::cout << "Type: Other";
+            break;
+    }
+    std::cout << std::endl;
 
-    switch (severity)
-    {
-        case GL_DEBUG_SEVERITY_HIGH:         std::cout << "Severity: high"; break;
-        case GL_DEBUG_SEVERITY_MEDIUM:       std::cout << "Severity: medium"; break;
-        case GL_DEBUG_SEVERITY_LOW:          std::cout << "Severity: low"; break;
-        case GL_DEBUG_SEVERITY_NOTIFICATION: std::cout << "Severity: notification"; break;
-    } std::cout << std::endl;
+    switch (severity) {
+        case GL_DEBUG_SEVERITY_HIGH: std::cout << "Severity: high";
+            break;
+        case GL_DEBUG_SEVERITY_MEDIUM: std::cout << "Severity: medium";
+            break;
+        case GL_DEBUG_SEVERITY_LOW: std::cout << "Severity: low";
+            break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: std::cout << "Severity: notification";
+            break;
+    }
+    std::cout << std::endl;
     std::cout << std::endl;
 }
 

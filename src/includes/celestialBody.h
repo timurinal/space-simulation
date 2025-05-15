@@ -3,10 +3,13 @@
 
 #include <bits/unique_ptr.h>
 #include <glm/glm.hpp>
+#include <utility>
 
 #include "octahedron.h"
 
 struct CelestialBody {
+    std::string name;
+
     double mass;
     double radius;
     double surfaceGravity;
@@ -20,8 +23,10 @@ struct CelestialBody {
     Material material;
     std::unique_ptr<Octahedron> gfx;
 
-    CelestialBody(double mass, double radius, double surfaceGravity, glm::vec3 position, glm::vec3 velocity, Material material)
-        : mass(mass),
+    CelestialBody(std::string name, double mass, double radius, double surfaceGravity, glm::vec3 position,
+                  glm::vec3 velocity, Material material)
+        : name(std::move(name)),
+          mass(mass),
           radius(radius),
           surfaceGravity(surfaceGravity),
           position(position),
@@ -43,8 +48,9 @@ struct CelestialBody {
     void draw(const glm::mat4 &worldToClip,
               const glm::vec3 &cameraPos,
               const glm::vec3 &lightPosWS,
-              const glm::vec3 &lightColour) {
-        gfx->setPosition(position);
+              const glm::vec3 &lightColour,
+              const glm::vec3 &relativePosition) {
+        gfx->setPosition(position - relativePosition);
         gfx->draw(worldToClip, cameraPos, material, lightPosWS, lightColour);
     }
 };
