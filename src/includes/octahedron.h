@@ -13,8 +13,8 @@ class Octahedron {
 public:
     static int CreateVertexLine(glm::vec3 from, glm::vec3 to, int steps, int v, std::vector<Vertex> & vertices);
 
-    static int CreateLowerStrip(int steps, int vTop, int vBottom, int t, std::vector<unsigned int> & triangles);
-    static int CreateUpperStrip(int steps, int vTop, int vBottom, int t, std::vector<unsigned int> & triangles);
+    static void CreateLowerStrip(int steps, int vTop, int vBottom, std::vector<unsigned int> & triangles);
+    static void CreateUpperStrip(int steps, int vTop, int vBottom, std::vector<unsigned int> & triangles);
 
     static void InitialiseShared(unsigned int subdivisions,
                                  const char *vertPath,

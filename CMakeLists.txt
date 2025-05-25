@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.15)
 project(space-simulation)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -31,7 +31,6 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     add_definitions(-DRELEASE)
 endif()
 
-
 add_executable(space-simulation src/main.cpp
         src/includes/shader.h
         src/rendering/shader.cpp
@@ -45,6 +44,7 @@ add_executable(space-simulation src/main.cpp
         src/includes/vertex.h
         external/stb/stb_image.h
         src/includes/material.h
+        src/includes/atmosphere.h
 )
 
 if(UNIX)

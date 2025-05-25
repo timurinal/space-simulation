@@ -1,7 +1,8 @@
 #include "octahedron.h"
 
 #include "vertex.h"
-#include "glm/ext/scalar_constants.hpp"
+
+#include <glm/ext/scalar_constants.hpp>
 
 #define VEC3_UP glm::vec3(0,1,0)
 #define VEC3_RIGHT glm::vec3(1,0,0)
@@ -17,35 +18,34 @@ int Octahedron::CreateVertexLine(glm::vec3 from, glm::vec3 to, int steps, int v,
     return v;
 }
 
-int Octahedron::CreateLowerStrip(int steps, int vTop, int vBottom, int t, std::vector<unsigned int> &triangles) {
+
+void Octahedron::CreateLowerStrip(int steps, int vTop, int vBottom, std::vector<unsigned int> &triangles) {
     for (int i = 1; i < steps; i++) {
-        triangles[t++] = vBottom;
-        triangles[t++] = vTop - 1;
-        triangles[t++] = vTop;
+        triangles.push_back(vBottom);
+        triangles.push_back(vTop - 1);
+        triangles.push_back(vTop);
 
-        triangles[t++] = vBottom++;
-        triangles[t++] = vTop++;
-        triangles[t++] = vBottom;
+        triangles.push_back(vBottom++);
+        triangles.push_back(vTop++);
+        triangles.push_back(vBottom);
     }
-    triangles[t++] = vBottom;
-    triangles[t++] = vTop - 1;
-    triangles[t++] = vTop;
-    return t;
+    triangles.push_back(vBottom);
+    triangles.push_back(vTop - 1);
+    triangles.push_back(vTop);
 }
-int Octahedron::CreateUpperStrip(int steps, int vTop, int vBottom, int t, std::vector<unsigned int> &triangles) {
-    triangles[t++] = vBottom;
-    triangles[t++] = vTop - 1;
-    triangles[t++] = ++vBottom;
+void Octahedron::CreateUpperStrip(int steps, int vTop, int vBottom, std::vector<unsigned int> &triangles) {
+    triangles.push_back(vBottom);
+    triangles.push_back(vTop - 1);
+    triangles.push_back(++vBottom);
     for (int i = 1; i <= steps; i++) {
-        triangles[t++] = vTop - 1;
-        triangles[t++] = vTop;
-        triangles[t++] = vBottom;
+        triangles.push_back(vTop - 1);
+        triangles.push_back(vTop);
+        triangles.push_back(vBottom);
 
-        triangles[t++] = vBottom;
-        triangles[t++] = vTop++;
-        triangles[t++] = ++vBottom;
+        triangles.push_back(vBottom);
+        triangles.push_back(vTop++);
+        triangles.push_back(++vBottom);
     }
-    return t;
 }
 
 void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPath, const char *fragPath) {
@@ -62,7 +62,7 @@ void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPat
     numTriangles = triangleCount;
 
     vertices.resize(vertexCount);
-    triangles.resize(triangleCount);
+    triangles.reserve(triangleCount);
 
     //  --------------------    Create the octahedron    --------------------  \\
 
@@ -73,7 +73,7 @@ void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPat
         VEC3_FORWARD
     };
 
-    int v = 0, vBottom = 0, t = 0;
+    int v = 0, vBottom = 0;
     for (int i = 0; i < 4; i++) {
         vertices[v++] = Vertex(VEC3_DOWN);
     }
@@ -86,7 +86,7 @@ void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPat
         for (int d = 0; d < 4; d++) {
             from = to;
             to = glm::mix(VEC3_DOWN, DIRECTIONS[d], progress);
-            t = CreateLowerStrip(i, v, vBottom, t, triangles);
+            CreateLowerStrip(i, v, vBottom, triangles);
             v = CreateVertexLine(from, to, i, v, vertices);
             vBottom += i > 1 ? i - 1 : 1;
         }
@@ -101,7 +101,7 @@ void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPat
         for (int d = 0; d < 4; d++) {
             from = to;
             to = glm::mix(VEC3_UP, DIRECTIONS[d], progress);
-            t = CreateUpperStrip(i, v, vBottom, t, triangles);
+            CreateUpperStrip(i, v, vBottom, triangles);
             v = CreateVertexLine(from, to, i, v, vertices);
             vBottom += i + 1;
         }
@@ -109,9 +109,9 @@ void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPat
     }
 
     for (int i = 0; i < 4; i++) {
-        triangles[t++] = vBottom;
-        triangles[t++] = v;
-        triangles[t++] = ++vBottom;
+        triangles.push_back(vBottom);
+        triangles.push_back(v);
+        triangles.push_back(++vBottom);
         vertices[v++].position = VEC3_UP;
     }
 
@@ -140,6 +140,9 @@ void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPat
     vertices[vertices.size() - 3].uv.x = vertices[1].uv.x = 0.375f;
     vertices[vertices.size() - 2].uv.x = vertices[2].uv.x = 0.625f;
     vertices[vertices.size() - 1].uv.x = vertices[3].uv.x = 0.875f;
+
+    std::cout << "Generated " << triangles.size() / 3 << " triangles from "
+              << vertices.size() << " vertices.\n";
 
     glGenVertexArrays(1, &sVAO);
     glGenBuffers(1, &sVBO);
@@ -188,7 +191,10 @@ void Octahedron::draw(const glm::mat4 &worldToClip, const glm::vec3 &cameraPos, 
     sShader->setInt("material.hasTexture", material.albedoTexture <= 0 ? 0 : 1);
     sShader->setInt("material.albedoTex", 0);
 
-    if (material.albedoTexture > 0) glBindTexture(GL_TEXTURE_2D, material.albedoTexture);
+    if (material.albedoTexture > 0) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, material.albedoTexture);
+    }
 
     glBindVertexArray(sVAO);
     glDrawElements(GL_TRIANGLES, numTriangles, GL_UNSIGNED_INT, nullptr);

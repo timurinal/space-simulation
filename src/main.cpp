@@ -14,6 +14,7 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/random.hpp>
 
+#include "atmosphere.h"
 #include "billboard.h"
 #include "camera.h"
 #include "celestialBody.h"
@@ -44,9 +45,13 @@ std::vector<CelestialBody> Bodies;
 
 std::atomic<float> gTimeScale{1.0f}; // 1 = real‑time; 2 = 2× faster; …
 
+GLuint framebuffer = 0;
+GLuint colorBuffer = 0;
+GLuint depthBuffer = 0;
+
 int RelativeBodyIndex = 0;
 
-bool RenderGrid = true;
+bool RenderGrid = false;
 
 const static float GravitationalConstant = 0.1;
 
@@ -172,12 +177,41 @@ int main() {
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // Create framebuffer
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+    // Create color attachment
+    glGenTextures(1, &colorBuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, WindowSize.x, WindowSize.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+
+    // Create depth attachment
+    glGenTextures(1, &depthBuffer);
+    glBindTexture(GL_TEXTURE_2D, depthBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, WindowSize.x, WindowSize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
+                 nullptr);
+    glBindTexture(GL_TEXTURE_2D, depthBuffer);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,   GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,   GL_CLAMP_TO_EDGE);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthBuffer, 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        throw std::runtime_error("Framebuffer is not complete!");
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
     Shader gridShader = Shader("../runtime/shaders/grid.vert", "../runtime/shaders/grid.frag");
     unsigned int gridVao;
     glGenVertexArrays(1, &gridVao);
 
     MainCamera = new Camera(1280.0 / 720.0);
-    MainCamera->setPosition(glm::vec3(0, 100, 0));
+    MainCamera->setPosition(glm::vec3(0, 2000, 0));
     MainCamera->setRotation(-90, -90);
 
     Billboard::InitialiseShared("../runtime/shaders/planet-billboard.vert", "../runtime/shaders/planet-billboard.frag");
@@ -213,11 +247,21 @@ int main() {
     sun.emission = glm::vec4(1, 1, 1, 1);
     Material planet{glm::vec3(1, 1, 1)};
     planet.albedoTexture = texture;
-    Material mars{glm::vec3(153,42,2)/255.0f};
+    Material mars{glm::vec3(153, 42, 2) / 255.0f};
 
-    Bodies.emplace_back("Sun", 15000, 10, 9.81f, glm::vec3(0), glm::vec3(0), sun);
-    Bodies.emplace_back("Earth", 100, 2, 9.81f, glm::vec3(50, 0, 0), glm::vec3(0, 0, 5), planet);
-    Bodies.emplace_back("Mars", 75, 1.5, 9.81f, glm::vec3(100, 0, 0), glm::vec3(0, 0, 3.5), mars);
+    Bodies.emplace_back("Sun", 1500, 200, 9.81f, glm::vec3(0), glm::vec3(0), sun);
+    Bodies.emplace_back("Earth", 10, 100, 9.81f, glm::vec3(600, 0, 0), glm::vec3(0, 0, 0.5), planet); // 0,0,5
+    // Bodies.emplace_back("Mars", 75, 1.5, 9.81f, glm::vec3(100, 0, 0), glm::vec3(0, 0, 3.5), mars);
+
+    Shader *atmosphereShader = new Shader("../runtime/shaders/ssbase.vert", "../runtime/shaders/atmosphere.frag");
+    Atmosphere::Initialise(atmosphereShader);
+
+    Atmosphere earthAtmosphere = Atmosphere();
+    AtmosphereSettings earthAtmosphereSettings;
+    earthAtmosphereSettings.atmosphereRadius = 200;
+    earthAtmosphereSettings.planetRadius = 60;
+    earthAtmosphereSettings.densityFalloff = 1;
+    earthAtmosphereSettings.scatteringStrength = 4;
 
     float lastFrameTime = 0;
     float nextFpsUpdateTime = 0;
@@ -242,6 +286,7 @@ int main() {
         processInput(window);
         glfwPollEvents();
 
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         MainCamera->update();
@@ -286,12 +331,24 @@ int main() {
             glViewport(0, 0, WindowSize.x, WindowSize.y);
         }
 
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBuffer);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, depthBuffer);
+
+        earthAtmosphere.render(earthAtmosphereSettings, MainCamera, Bodies[1].position - Bodies[RelativeBodyIndex].position, Bodies[0].position - Bodies[RelativeBodyIndex].position);
+
         // std::cout << "Camera Position: (" << MainCamera->Position.x << ", " << MainCamera->Position.y << ", " << MainCamera->Position.z << ") Rotation: (" << MainCamera->Yaw << ", " << MainCamera->Pitch << ")" << std::endl;
 
         glfwSwapBuffers(window);
 
         std::ostringstream title;
-        title << frameTime << " ms (" << fps << " fps)  ×" << gTimeScale.load() << " | Rendering relative to body: " << Bodies[RelativeBodyIndex].name;
+        title << frameTime << " ms (" << fps << " fps)  ×" << gTimeScale.load() << " | Rendering relative to body: " <<
+                Bodies[RelativeBodyIndex].name;
         glfwSetWindowTitle(window, title.str().c_str());
     }
 
@@ -309,6 +366,13 @@ void framebuffer_resized(GLFWwindow *window, int width, int height) {
 
     float aspect = width / (float) height;
     MainCamera->setAspect(aspect);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, depthBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
@@ -339,7 +403,7 @@ void processInput(GLFWwindow *window) {
     auto offset = glm::vec3(0);
 
     const float moveSpeed = 5.0f;
-    const float fastSpeed = 50.0f;
+    const float fastSpeed = 150.0f;
     float speed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? fastSpeed : moveSpeed;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) offset += MainCamera->Front * (speed * DeltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) offset -= MainCamera->Front * (speed * DeltaTime);

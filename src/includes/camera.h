@@ -72,7 +72,7 @@ private:
 
     void updateProjection()
     {
-        projection = glm::perspective(glm::radians(65.0f), aspect, 0.01f, 5000.0f);
+        projection = glm::perspective(glm::radians(65.0f), aspect, 0.1f, 2500.0f);
         inv_projection = glm::inverse(projection);
     }
 

@@ -23,7 +23,7 @@ uniform vec3 lightPos;
 
 void main() {
     vec3 dirToLight = normalize(lightPos - fragPos);
-    float diff = max(dot(normal, dirToLight), 0.0);
+    float diff = max(dot(normal, dirToLight), 0.03);
     // fragColour = vec3(normal * 0.5 + 0.5) * diff;
     // fragColour = texture(Albedo, uv).rgb * diff;
     vec3 texCol = vec3(1);
