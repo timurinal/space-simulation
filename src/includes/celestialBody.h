@@ -14,8 +14,8 @@ struct CelestialBody {
     double radius;
     double surfaceGravity;
 
-    glm::vec3 position;
-    glm::vec3 velocity;
+    glm::dvec3 position;
+    glm::dvec3 velocity;
 
     const unsigned int instanceId;
     static unsigned int nextId;
@@ -23,8 +23,8 @@ struct CelestialBody {
     Material material;
     std::unique_ptr<Octahedron> gfx;
 
-    CelestialBody(std::string name, double mass, double radius, double surfaceGravity, glm::vec3 position,
-                  glm::vec3 velocity, Material material)
+    CelestialBody(std::string name, double mass, double radius, double surfaceGravity, glm::dvec3 position,
+                  glm::dvec3 velocity, Material material)
         : name(std::move(name)),
           mass(mass),
           radius(radius),
@@ -49,8 +49,8 @@ struct CelestialBody {
               const glm::vec3 &cameraPos,
               const glm::vec3 &lightPosWS,
               const glm::vec3 &lightColour,
-              const glm::vec3 &relativePosition) {
-        gfx->setPosition(position - relativePosition);
+              const glm::dvec3 &relativePosition) {
+        gfx->setPosition(glm::vec3(position - relativePosition));
         gfx->draw(worldToClip, cameraPos, material, lightPosWS, lightColour);
     }
 };

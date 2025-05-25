@@ -43,7 +43,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
 
 std::vector<CelestialBody> Bodies;
 
-std::atomic<float> gTimeScale{1.0f}; // 1 = real‑time; 2 = 2× faster; …
+std::atomic<double> gTimeScale{1.0}; // 1 = real‑time; 2 = 2× faster; …
 
 GLuint framebuffer = 0;
 GLuint colorBuffer = 0;
@@ -53,21 +53,21 @@ int RelativeBodyIndex = 0;
 
 bool RenderGrid = false;
 
-const static float GravitationalConstant = 0.1;
+const static double GravitationalConstant = 0.1;
 
 unsigned int RenderMode = 0;
 
 void updatePhysics() {
-    const float fixedTimeStep = 1.0f / 500;
-    float accumulator = 0.0f;
+    const double fixedTimeStep = 1.0f / 500;
+    double accumulator = 0.0f;
     auto lastTime = std::chrono::high_resolution_clock::now();
 
     while (true) {
         auto now = std::chrono::high_resolution_clock::now();
-        float frameTime = std::chrono::duration<float>(now - lastTime).count();
+        double frameTime = std::chrono::duration<double>(now - lastTime).count();
         lastTime = now;
 
-        frameTime = std::min(frameTime, 0.05f); // safety if frameTime spikes
+        frameTime = std::min(frameTime, 0.05); // safety if frameTime spikes
 
         frameTime *= gTimeScale.load(std::memory_order_relaxed);
         accumulator += frameTime;
@@ -75,8 +75,8 @@ void updatePhysics() {
         while (accumulator >= fixedTimeStep) {
             if (frameTime > 0.0f) {
                 // Use shadow copies
-                std::vector<glm::vec3> positions;
-                std::vector<glm::vec3> velocities;
+                std::vector<glm::dvec3> positions;
+                std::vector<glm::dvec3> velocities;
 
                 for (const auto &body: Bodies) {
                     positions.push_back(body.position);
@@ -84,21 +84,21 @@ void updatePhysics() {
                 }
 
                 // 1. Compute forces using frozen positions
-                std::vector<glm::vec3> newVelocities = velocities;
+                std::vector<glm::dvec3> newVelocities = velocities;
                 for (size_t i = 0; i < Bodies.size(); ++i) {
                     for (size_t j = 0; j < Bodies.size(); ++j) {
                         if (i == j) continue;
 
-                        glm::vec3 dir = positions[j] - positions[i];
-                        float sqrDist = glm::length2(dir);
+                        glm::dvec3 dir = positions[j] - positions[i];
+                        double sqrDist = glm::length2(dir);
 
                         if (sqrDist > 0.0001f) {
                             // prevent division by zero
-                            glm::vec3 forceDir = glm::normalize(dir);
-                            glm::vec3 force = forceDir * GravitationalConstant *
-                                              static_cast<float>((Bodies[i].mass * Bodies[j].mass)) / sqrDist;
+                            glm::dvec3 forceDir = glm::normalize(dir);
+                            glm::dvec3 force = forceDir * GravitationalConstant *
+                                              (Bodies[i].mass * Bodies[j].mass) / sqrDist;
 
-                            glm::vec3 acceleration = force / static_cast<float>(Bodies[i].mass);
+                            glm::dvec3 acceleration = force / Bodies[i].mass;
                             newVelocities[i] += acceleration * fixedTimeStep;
                         }
                     }
@@ -249,8 +249,8 @@ int main() {
     planet.albedoTexture = texture;
     Material mars{glm::vec3(153, 42, 2) / 255.0f};
 
-    Bodies.emplace_back("Sun", 1500, 200, 9.81f, glm::vec3(0), glm::vec3(0), sun);
-    Bodies.emplace_back("Earth", 10, 100, 9.81f, glm::vec3(600, 0, 0), glm::vec3(0, 0, 0.5), planet); // 0,0,5
+    Bodies.emplace_back("Sun", 1500, 200, 9.81f, glm::dvec3(0), glm::dvec3(0), sun);
+    Bodies.emplace_back("Earth", 10, 100, 9.81f, glm::dvec3(600, 0, 0), glm::dvec3(0, 0, 0.5), planet); // 0,0,5
     // Bodies.emplace_back("Mars", 75, 1.5, 9.81f, glm::vec3(100, 0, 0), glm::vec3(0, 0, 3.5), mars);
 
     Shader *atmosphereShader = new Shader("../runtime/shaders/ssbase.vert", "../runtime/shaders/atmosphere.frag");
@@ -415,18 +415,18 @@ void processInput(GLFWwindow *window) {
 
     MainCamera->move(offset);
 
-    float step = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
-                     ? 50.0f
+    double step = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
+                     ? 50.0
                      : glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS
-                           ? 5.0f
-                           : 0.5f; // change per key‑press
+                           ? 5.0
+                           : 0.5; // change per key‑press
     static bool plusHeld = false, minusHeld = false;
 
     // Increase time‑scale (KP + or '=' key)
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
         if (!plusHeld) {
-            gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0f, 500.0f);
+            gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0, 500.0);
             plusHeld = true;
         }
     } else plusHeld = false;
@@ -435,7 +435,7 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) {
         if (!minusHeld) {
-            gTimeScale = glm::max(0.0f, gTimeScale.load() - step);
+            gTimeScale = glm::max(0.0, gTimeScale.load() - step);
             minusHeld = true;
         }
     } else minusHeld = false;
