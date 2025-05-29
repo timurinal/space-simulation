@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "octahedron.h"
+#include "maths.h"
 
 struct CelestialBody {
     std::string name;
@@ -32,7 +33,7 @@ struct CelestialBody {
           position(position),
           velocity(velocity),
           instanceId(nextId++),
-          gfx(std::make_unique<Octahedron>(position, radius)) {
+          gfx(std::make_unique<Octahedron>(position, kmToSu(radius))) {
         this->material = material;
     }
 
@@ -50,7 +51,8 @@ struct CelestialBody {
               const glm::vec3 &lightPosWS,
               const glm::vec3 &lightColour,
               const glm::dvec3 &relativePosition) {
-        gfx->setPosition(glm::vec3(position - relativePosition));
+        glm::vec3 posSU    = glm::vec3((position - relativePosition) / SU_IN_KM);
+        gfx->setPosition(posSU);
         gfx->draw(worldToClip, cameraPos, material, lightPosWS, lightColour);
     }
 };

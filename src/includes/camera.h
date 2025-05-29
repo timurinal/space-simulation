@@ -33,8 +33,10 @@ public:
     [[nodiscard]] glm::mat4 worldToClip() const { return matrix_projectionView; }
 
     [[nodiscard]] glm::mat4 getProjectionMatrix() const { return projection; }
+    [[nodiscard]] glm::mat4 getProjectionNearMatrix() const { return projectionNear; }
     [[nodiscard]] glm::mat4 getViewMatrix() const { return view; }
     [[nodiscard]] glm::mat4 getInvProjectionMatrix() const { return inv_projection; }
+    [[nodiscard]] glm::mat4 getInvProjectionNearMatrix() const { return inv_projectionNear; }
     [[nodiscard]] glm::mat4 getInvViewMatrix() const { return inv_view; }
 
     void update()
@@ -59,9 +61,11 @@ public:
     
 private:
     glm::mat4 projection;
+    glm::mat4 projectionNear;
     glm::mat4 view;
 
     glm::mat4 inv_projection;
+    glm::mat4 inv_projectionNear;
     glm::mat4 inv_view;
 
     glm::mat4 matrix_projectionView;
@@ -72,8 +76,10 @@ private:
 
     void updateProjection()
     {
-        projection = glm::perspective(glm::radians(65.0f), aspect, 0.1f, 2500.0f);
+        projection = glm::perspective(glm::radians(65.0f), aspect, 1.0f, 150000000.0f);
+        projectionNear = glm::perspective(glm::radians(65.0f), aspect, 0.5f, 5000.0f);
         inv_projection = glm::inverse(projection);
+        inv_projectionNear = glm::inverse(projectionNear);
     }
 
     void updateVectors()

@@ -69,7 +69,7 @@ void main() {
     vec3 originalCol = texture(MainTex, uv).rgb;
 
     float sceneDepthNonLinear = texture(DepthTex, uv).r;
-    float sceneDepth = lineariseDepth(sceneDepthNonLinear, 0.1f, 2500.0f);
+    float sceneDepth = lineariseDepth(sceneDepthNonLinear, 1.0f, 100000.0f);
 
     vec2 sphereHit = raySphere(atmospherePosition, atmosphereRadius, cameraPos, rayDir);
     float dstToAtmosphere = sphereHit.x;

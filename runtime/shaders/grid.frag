@@ -55,11 +55,12 @@ void main() {
     float linearDepth = computeLinearDepth(fragPos);
     float fading = max(0, 0.5 - linearDepth);
 
-    vec4 grid10m = grid(fragPos, 0.1, false);
-    vec4 grid1m = grid(fragPos, 1, true);
-    vec4 grid10cm = grid(fragPos, 10, false);
+    vec4 grid100m = grid(fragPos, 0.1, false);
+    vec4 grid1km = grid(fragPos, 0.01, false);
+    vec4 grid10km = grid(fragPos, 0.01, false);
+    vec4 axisLines = grid(fragPos, 1.0, true) - grid(fragPos, 1.0, false);
 
     // Apply the fading and ensure we only draw where t > 0
-    fragColour = (grid10cm + grid1m + grid10m) * float(t > 0);
+    fragColour = (grid100m + grid1km + grid10km + axisLines) * float(t > 0);
     fragColour.a *= fading;
 }

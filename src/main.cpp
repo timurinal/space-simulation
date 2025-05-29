@@ -18,10 +18,11 @@
 #include "billboard.h"
 #include "camera.h"
 #include "celestialBody.h"
+#include "maths.h"
 #include "octahedron.h"
 #include "shader.h"
 
-glm::ivec2 WindowSize = glm::ivec2(1280, 720);
+glm::ivec2 WindowSize = glm::ivec2(1920, 1080);
 
 bool firstMouse = true;
 double lastX, lastY;
@@ -53,66 +54,87 @@ int RelativeBodyIndex = 0;
 
 bool RenderGrid = false;
 
-const static double GravitationalConstant = 0.1;
+const static double GravitationalConstant = 6.6743e-20;
 
 unsigned int RenderMode = 0;
 
+std::vector<glm::dvec3> computeAccelerations(const std::vector<glm::dvec3>& positions) {
+    std::vector<glm::dvec3> accelerations(Bodies.size(), glm::dvec3(0));
+
+    for (size_t i = 0; i < Bodies.size(); ++i) {
+        for (size_t j = 0; j < Bodies.size(); ++j) {
+            if (i == j) continue;
+
+            glm::dvec3 dir = positions[j] - positions[i];
+            double sqrDist = glm::length2(dir);
+
+            if (sqrDist > 0.0001) {
+                glm::dvec3 forceDir = glm::normalize(dir);
+                glm::dvec3 force = forceDir * GravitationalConstant *
+                                   (Bodies[i].mass * Bodies[j].mass) / sqrDist;
+
+                accelerations[i] += force / Bodies[i].mass;
+            }
+        }
+    }
+
+    return accelerations;
+}
+
 void updatePhysics() {
-    const double fixedTimeStep = 1.0f / 500;
-    double accumulator = 0.0f;
+    const double fixedTimeStep = 1.0 / 100;
+    double accumulator = 0.0;
     auto lastTime = std::chrono::high_resolution_clock::now();
+
+    // Initialise shadow state
+    std::vector<glm::dvec3> positions;
+    std::vector<glm::dvec3> velocities;
+
+    for (const auto& body : Bodies) {
+        positions.push_back(body.position);
+        velocities.push_back(body.velocity);
+    }
+
+    std::vector<glm::dvec3> accelerations = computeAccelerations(positions);
 
     while (true) {
         auto now = std::chrono::high_resolution_clock::now();
         double frameTime = std::chrono::duration<double>(now - lastTime).count();
         lastTime = now;
 
-        frameTime = std::min(frameTime, 0.05); // safety if frameTime spikes
-
+        frameTime = std::min(frameTime, 0.05); // cap huge spikes
         frameTime *= gTimeScale.load(std::memory_order_relaxed);
         accumulator += frameTime;
 
         while (accumulator >= fixedTimeStep) {
-            if (frameTime > 0.0f) {
-                // Use shadow copies
-                std::vector<glm::dvec3> positions;
-                std::vector<glm::dvec3> velocities;
+            // Kick: update velocity by half-step
+            for (size_t i = 0; i < Bodies.size(); ++i)
+                velocities[i] += accelerations[i] * (fixedTimeStep * 0.5);
 
-                for (const auto &body: Bodies) {
-                    positions.push_back(body.position);
-                    velocities.push_back(body.velocity);
-                }
+            // Drift: update position
+            for (size_t i = 0; i < Bodies.size(); ++i)
+                positions[i] += velocities[i] * fixedTimeStep;
 
-                // 1. Compute forces using frozen positions
-                std::vector<glm::dvec3> newVelocities = velocities;
-                for (size_t i = 0; i < Bodies.size(); ++i) {
-                    for (size_t j = 0; j < Bodies.size(); ++j) {
-                        if (i == j) continue;
+            // Recompute accelerations at new positions
+            std::vector<glm::dvec3> newAccelerations = computeAccelerations(positions);
 
-                        glm::dvec3 dir = positions[j] - positions[i];
-                        double sqrDist = glm::length2(dir);
+            // Kick: complete velocity update
+            for (size_t i = 0; i < Bodies.size(); ++i)
+                velocities[i] += newAccelerations[i] * (fixedTimeStep * 0.5);
 
-                        if (sqrDist > 0.0001f) {
-                            // prevent division by zero
-                            glm::dvec3 forceDir = glm::normalize(dir);
-                            glm::dvec3 force = forceDir * GravitationalConstant *
-                                              (Bodies[i].mass * Bodies[j].mass) / sqrDist;
-
-                            glm::dvec3 acceleration = force / Bodies[i].mass;
-                            newVelocities[i] += acceleration * fixedTimeStep;
-                        }
-                    }
-                }
-
-                // 2. Update bodies with new velocities and positions
-                for (size_t i = 0; i < Bodies.size(); ++i) {
-                    Bodies[i].position += Bodies[i].velocity * fixedTimeStep;
-                    Bodies[i].velocity = newVelocities[i];
-                }
-            }
-
+            // Prepare for next iteration
+            accelerations = std::move(newAccelerations);
             accumulator -= fixedTimeStep;
         }
+
+        // Push state back to Bodies (once per frame)
+        for (size_t i = 0; i < Bodies.size(); ++i) {
+            Bodies[i].position = positions[i];
+            Bodies[i].velocity = velocities[i];
+        }
+
+        // Allow background thread to yield
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Removed to allow the simulation to run at full speed, even if it causes visually laggy results
     }
 }
 
@@ -129,7 +151,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif
 
-    auto window = glfwCreateWindow(1280, 720, "Space Simulation", nullptr, nullptr);
+    auto window = glfwCreateWindow(1920, 1080, "Space Simulation", nullptr, nullptr);
     if (window == nullptr) {
         throw std::runtime_error("[GLFW] Failed to create window");
     }
@@ -162,7 +184,7 @@ int main() {
     }
 #endif
 
-    glViewport(0, 0, 1280, 720);
+    glViewport(0, 0, 1920, 1080);
 
     // glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClearColor(0, 0, 0, 1.0f);
@@ -177,6 +199,7 @@ int main() {
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    /*
     // Create framebuffer
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -192,7 +215,7 @@ int main() {
     // Create depth attachment
     glGenTextures(1, &depthBuffer);
     glBindTexture(GL_TEXTURE_2D, depthBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, WindowSize.x, WindowSize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, WindowSize.x, WindowSize.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT,
                  nullptr);
     glBindTexture(GL_TEXTURE_2D, depthBuffer);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -205,13 +228,14 @@ int main() {
         throw std::runtime_error("Framebuffer is not complete!");
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    */
 
     Shader gridShader = Shader("../runtime/shaders/grid.vert", "../runtime/shaders/grid.frag");
     unsigned int gridVao;
     glGenVertexArrays(1, &gridVao);
 
-    MainCamera = new Camera(1280.0 / 720.0);
-    MainCamera->setPosition(glm::vec3(0, 2000, 0));
+    MainCamera = new Camera(1920.0 / 1080.0);
+    MainCamera->setPosition(glm::vec3(0, kmToSu(6500), 0));
     MainCamera->setRotation(-90, -90);
 
     Billboard::InitialiseShared("../runtime/shaders/planet-billboard.vert", "../runtime/shaders/planet-billboard.frag");
@@ -249,8 +273,8 @@ int main() {
     planet.albedoTexture = texture;
     Material mars{glm::vec3(153, 42, 2) / 255.0f};
 
-    Bodies.emplace_back("Sun", 1500, 200, 9.81f, glm::dvec3(0), glm::dvec3(0), sun);
-    Bodies.emplace_back("Earth", 10, 100, 9.81f, glm::dvec3(600, 0, 0), glm::dvec3(0, 0, 0.5), planet); // 0,0,5
+    Bodies.emplace_back("Sun", 1988470000000000000000000000000.0, 696340.0, 9.81f, glm::dvec3(0), glm::dvec3(0), sun);
+    Bodies.emplace_back("Earth", 5972200000000000000000000.0, 6371.0, 9.81f, glm::dvec3(149597870.7, 0, 0), glm::dvec3(0, 0, mToKm(29783)), planet); // 0,0,5
     // Bodies.emplace_back("Mars", 75, 1.5, 9.81f, glm::vec3(100, 0, 0), glm::vec3(0, 0, 3.5), mars);
 
     Shader *atmosphereShader = new Shader("../runtime/shaders/ssbase.vert", "../runtime/shaders/atmosphere.frag");
@@ -286,7 +310,7 @@ int main() {
         processInput(window);
         glfwPollEvents();
 
-        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        // glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         MainCamera->update();
@@ -312,13 +336,13 @@ int main() {
             glDisable(GL_CULL_FACE);
 
             gridShader.bind();
-            gridShader.setMat4("proj", MainCamera->getProjectionMatrix());
-            gridShader.setMat4("inv_proj", MainCamera->getInvProjectionMatrix());
+            gridShader.setMat4("proj", MainCamera->getProjectionNearMatrix());
+            gridShader.setMat4("inv_proj", MainCamera->getInvProjectionNearMatrix());
             gridShader.setMat4("view", MainCamera->getViewMatrix());
             gridShader.setMat4("inv_view", MainCamera->getInvViewMatrix());
             gridShader.setVec3("cameraPos", MainCamera->Position);
-            gridShader.setFloat("nearPlane", 0.001f);
-            gridShader.setFloat("farPlane", 1000.0f);
+            gridShader.setFloat("nearPlane", 0.5f);
+            gridShader.setFloat("farPlane", 5000.0f);
             glBindVertexArray(gridVao);
             glDrawArrays(GL_TRIANGLES, 0, 6);
             glBindVertexArray(0);
@@ -331,8 +355,8 @@ int main() {
             glViewport(0, 0, WindowSize.x, WindowSize.y);
         }
 
+        /*
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
@@ -341,6 +365,7 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, depthBuffer);
 
         earthAtmosphere.render(earthAtmosphereSettings, MainCamera, Bodies[1].position - Bodies[RelativeBodyIndex].position, Bodies[0].position - Bodies[RelativeBodyIndex].position);
+        */
 
         // std::cout << "Camera Position: (" << MainCamera->Position.x << ", " << MainCamera->Position.y << ", " << MainCamera->Position.z << ") Rotation: (" << MainCamera->Yaw << ", " << MainCamera->Pitch << ")" << std::endl;
 
@@ -367,12 +392,14 @@ void framebuffer_resized(GLFWwindow *window, int width, int height) {
     float aspect = width / (float) height;
     MainCamera->setAspect(aspect);
 
+    /*
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
     glBindTexture(GL_TEXTURE_2D, colorBuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, depthBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    */
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
@@ -416,7 +443,7 @@ void processInput(GLFWwindow *window) {
     MainCamera->move(offset);
 
     double step = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS
-                     ? 50.0
+                     ? 100.0
                      : glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS
                            ? 5.0
                            : 0.5; // change per key‑press
@@ -426,7 +453,7 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
         if (!plusHeld) {
-            gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0, 500.0);
+            gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0, 5000.0);
             plusHeld = true;
         }
     } else plusHeld = false;

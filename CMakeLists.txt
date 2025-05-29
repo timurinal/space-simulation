@@ -45,6 +45,7 @@ add_executable(space-simulation src/main.cpp
         external/stb/stb_image.h
         src/includes/material.h
         src/includes/atmosphere.h
+        src/includes/maths.h
 )
 
 if(UNIX)
