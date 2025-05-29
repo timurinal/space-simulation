@@ -141,9 +141,6 @@ void Octahedron::InitialiseShared(unsigned int subdivisions, const char *vertPat
     vertices[vertices.size() - 2].uv.x = vertices[2].uv.x = 0.625f;
     vertices[vertices.size() - 1].uv.x = vertices[3].uv.x = 0.875f;
 
-    std::cout << "Generated " << triangles.size() / 3 << " triangles from "
-              << vertices.size() << " vertices.\n";
-
     glGenVertexArrays(1, &sVAO);
     glGenBuffers(1, &sVBO);
     glGenBuffers(1, &sEBO);

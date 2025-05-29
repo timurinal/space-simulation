@@ -24,12 +24,12 @@ struct CelestialBody {
     Material material;
     std::unique_ptr<Octahedron> gfx;
 
-    CelestialBody(std::string name, double mass, double radius, double surfaceGravity, glm::dvec3 position,
+    CelestialBody(std::string name, double mass, double radius, glm::dvec3 position,
                   glm::dvec3 velocity, Material material)
         : name(std::move(name)),
           mass(mass),
           radius(radius),
-          surfaceGravity(surfaceGravity),
+          surfaceGravity(deriveSurfaceGravity(mass, radius)),
           position(position),
           velocity(velocity),
           instanceId(nextId++),

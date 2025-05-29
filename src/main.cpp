@@ -54,10 +54,9 @@ int RelativeBodyIndex = 0;
 
 bool RenderGrid = false;
 
-const static double GravitationalConstant = 6.6743e-20;
-
 unsigned int RenderMode = 0;
 
+// TODO: abstract physics into a separate class
 std::vector<glm::dvec3> computeAccelerations(const std::vector<glm::dvec3>& positions) {
     std::vector<glm::dvec3> accelerations(Bodies.size(), glm::dvec3(0));
 
@@ -273,8 +272,12 @@ int main() {
     planet.albedoTexture = texture;
     Material mars{glm::vec3(153, 42, 2) / 255.0f};
 
-    Bodies.emplace_back("Sun", 1988470000000000000000000000000.0, 696340.0, 9.81f, glm::dvec3(0), glm::dvec3(0), sun);
-    Bodies.emplace_back("Earth", 5972200000000000000000000.0, 6371.0, 9.81f, glm::dvec3(149597870.7, 0, 0), glm::dvec3(0, 0, mToKm(29783)), planet); // 0,0,5
+    Bodies.emplace_back("Sun", 1988470000000000000000000000000.0, 696340.0, glm::dvec3(0), glm::dvec3(0), sun);
+    Bodies.emplace_back("Earth", 5972200000000000000000000.0, 6371.0, glm::dvec3(149597870.7, 0, 0), glm::dvec3(0, 0, mToKm(29783)), planet); // 0,0,5
+
+    std::cout << "Sun gravity: " << Bodies[0].surfaceGravity << " m/s²" << std::endl;
+    std::cout << "Earth gravity: " << Bodies[1].surfaceGravity << " m/s²" << std::endl;
+
     // Bodies.emplace_back("Mars", 75, 1.5, 9.81f, glm::vec3(100, 0, 0), glm::vec3(0, 0, 3.5), mars);
 
     Shader *atmosphereShader = new Shader("../runtime/shaders/ssbase.vert", "../runtime/shaders/atmosphere.frag");
