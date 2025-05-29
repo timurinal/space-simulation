@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Build with CMake",
+            "type": "command",
+            "program": "/bin/bash",
+            "args": [
+                "-c",
+                "mkdir -p build && cmake -S . -B ./build && make -C ./build"
+            ],
+            "workingDir": "./"
+        },
+        {
+            "name": "Run with CMake",
+            "type": "command",
+            "program": "./space-simulation",
+            "args": [],
+            "workingDir": "./build"
+        }
+    ]
+}

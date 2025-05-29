@@ -1,0 +1,183 @@
+43
+126
+{"Hash":"1Z55HUENV76D6","Name":"system_stdbool","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_stdbool-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_stddef","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_stddef-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_assert","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_assert-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_string","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_string-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_unistd","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_unistd-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_stdio","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_stdio-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_stdint","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_stdint-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_stdlib","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_stdlib-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_Xlib","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_Xlib-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"system_wayland_util","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/system_wayland_util-1Z55HUENV76D6.pcm"}
+{"Hash":"1Z55HUENV76D6","Name":"internal","Path":"/home/timuri/projects/space-simulation/.cache/jb/cache/internal-1Z55HUENV76D6.pcm"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/xkb_unicode.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glad/src/glad.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/null_window.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/src/rendering/billboard.cpp"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/platform.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/src/celestialBody.cpp"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/x11_window.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/src/rendering/octahedron.cpp"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/init.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/monitor.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/wl_init.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/posix_thread.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/window.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/egl_context.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/null_monitor.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/osmesa_context.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/posix_poll.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/context.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/wl_window.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/wl_monitor.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/src/rendering/shader.cpp"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/input.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/linux_joystick.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/src/main.cpp"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/x11_monitor.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/glx_context.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/vulkan.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/posix_time.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/null_init.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/x11_init.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/posix_module.c"}
+{"Hash":"","Name":"","Path":"/home/timuri/projects/space-simulation/external/glfw/src/null_joystick.c"}
+(3, 1) {"Indirect":false}
+(4, 1) {"Indirect":false}
+(5, 1) {"Indirect":false}
+(7, 1) {"Indirect":false}
+(8, 1) {"Indirect":false}
+(9, 1) {"Indirect":false}
+(9, 6) {"Indirect":false}
+(10, 1) {"Indirect":false}
+(10, 6) {"Indirect":false}
+(10, 0) {"Indirect":false}
+(10, 8) {"Indirect":false}
+(10, 5) {"Indirect":false}
+(10, 4) {"Indirect":false}
+(10, 9) {"Indirect":false}
+(11, 10) {"Indirect":false}
+(13, 10) {"Indirect":false}
+(13, 3) {"Indirect":false}
+(13, 7) {"Indirect":false}
+(15, 10) {"Indirect":false}
+(15, 3) {"Indirect":false}
+(15, 7) {"Indirect":false}
+(17, 10) {"Indirect":false}
+(17, 3) {"Indirect":false}
+(17, 7) {"Indirect":false}
+(17, 2) {"Indirect":false}
+(17, 5) {"Indirect":false}
+(19, 10) {"Indirect":false}
+(19, 3) {"Indirect":false}
+(19, 7) {"Indirect":false}
+(19, 2) {"Indirect":false}
+(19, 5) {"Indirect":false}
+(20, 10) {"Indirect":false}
+(20, 3) {"Indirect":false}
+(20, 7) {"Indirect":false}
+(20, 2) {"Indirect":false}
+(21, 10) {"Indirect":false}
+(21, 3) {"Indirect":false}
+(21, 7) {"Indirect":false}
+(21, 4) {"Indirect":false}
+(21, 1) {"Indirect":false}
+(21, 2) {"Indirect":false}
+(21, 6) {"Indirect":false}
+(21, 9) {"Indirect":false}
+(21, 0) {"Indirect":false}
+(21, 5) {"Indirect":false}
+(22, 10) {"Indirect":false}
+(22, 3) {"Indirect":false}
+(22, 2) {"Indirect":false}
+(23, 10) {"Indirect":false}
+(23, 3) {"Indirect":false}
+(23, 7) {"Indirect":false}
+(23, 2) {"Indirect":false}
+(24, 10) {"Indirect":false}
+(24, 3) {"Indirect":false}
+(24, 7) {"Indirect":false}
+(24, 2) {"Indirect":false}
+(24, 5) {"Indirect":false}
+(25, 10) {"Indirect":false}
+(25, 3) {"Indirect":false}
+(25, 7) {"Indirect":false}
+(26, 10) {"Indirect":false}
+(26, 3) {"Indirect":false}
+(26, 7) {"Indirect":false}
+(26, 2) {"Indirect":false}
+(27, 10) {"Indirect":false}
+(27, 1) {"Indirect":false}
+(27, 4) {"Indirect":false}
+(28, 10) {"Indirect":false}
+(28, 3) {"Indirect":false}
+(28, 2) {"Indirect":false}
+(28, 5) {"Indirect":false}
+(29, 10) {"Indirect":false}
+(29, 3) {"Indirect":false}
+(29, 7) {"Indirect":false}
+(29, 4) {"Indirect":false}
+(29, 1) {"Indirect":false}
+(29, 2) {"Indirect":false}
+(29, 6) {"Indirect":false}
+(29, 9) {"Indirect":false}
+(29, 5) {"Indirect":false}
+(30, 10) {"Indirect":false}
+(30, 3) {"Indirect":false}
+(30, 7) {"Indirect":false}
+(30, 2) {"Indirect":false}
+(30, 1) {"Indirect":false}
+(30, 6) {"Indirect":false}
+(30, 9) {"Indirect":false}
+(30, 5) {"Indirect":false}
+(32, 10) {"Indirect":false}
+(32, 3) {"Indirect":false}
+(32, 7) {"Indirect":false}
+(32, 2) {"Indirect":false}
+(33, 10) {"Indirect":false}
+(33, 3) {"Indirect":false}
+(33, 7) {"Indirect":false}
+(33, 4) {"Indirect":false}
+(33, 6) {"Indirect":false}
+(33, 1) {"Indirect":false}
+(33, 5) {"Indirect":false}
+(35, 10) {"Indirect":false}
+(35, 3) {"Indirect":false}
+(35, 7) {"Indirect":false}
+(35, 2) {"Indirect":false}
+(36, 10) {"Indirect":false}
+(36, 3) {"Indirect":false}
+(36, 7) {"Indirect":false}
+(36, 2) {"Indirect":false}
+(37, 10) {"Indirect":false}
+(37, 3) {"Indirect":false}
+(37, 7) {"Indirect":false}
+(37, 2) {"Indirect":false}
+(38, 10) {"Indirect":false}
+(38, 4) {"Indirect":false}
+(39, 10) {"Indirect":false}
+(39, 3) {"Indirect":false}
+(39, 7) {"Indirect":false}
+(40, 10) {"Indirect":false}
+(40, 3) {"Indirect":false}
+(40, 7) {"Indirect":false}
+(40, 4) {"Indirect":false}
+(40, 2) {"Indirect":false}
+(40, 5) {"Indirect":false}
+(40, 1) {"Indirect":false}
+(41, 10) {"Indirect":false}
+(41, 1) {"Indirect":false}
+(42, 10) {"Indirect":false}
+11
+{"Headers":["/home/timuri/.cache/JetBrains/Fleet/language_server/jbclangd/include/stdbool.h"],"IsSystem":true,"Name":"system_stdbool"}
+{"Headers":["/home/timuri/.cache/JetBrains/Fleet/language_server/jbclangd/include/stddef.h"],"IsSystem":true,"Name":"system_stddef"}
+{"Headers":["/home/timuri/projects/space-simulation/external/glfw/src/internal.h"],"IsSystem":false,"Name":"internal"}
+{"Headers":["/usr/include/wayland-util.h"],"IsSystem":true,"Name":"system_wayland_util"}
+{"Headers":["/usr/include/stdio.h"],"IsSystem":true,"Name":"system_stdio"}
+{"Headers":["/usr/include/string.h"],"IsSystem":true,"Name":"system_string"}
+{"Headers":["/usr/include/unistd.h"],"IsSystem":true,"Name":"system_unistd"}
+{"Headers":["/usr/include/assert.h"],"IsSystem":true,"Name":"system_assert"}
+{"Headers":["/usr/include/X11/Xlib.h"],"IsSystem":true,"Name":"system_Xlib"}
+{"Headers":["/home/timuri/.cache/JetBrains/Fleet/language_server/jbclangd/include/stdint.h"],"IsSystem":true,"Name":"system_stdint"}
+{"Headers":["/usr/include/stdlib.h"],"IsSystem":true,"Name":"system_stdlib"}

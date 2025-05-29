@@ -3,6 +3,8 @@ project(space-simulation)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(GLFW_PATH "external/glfw")
 set(GLAD_PATH "external/glad")
 set(GLM_PATH "external/glm")
