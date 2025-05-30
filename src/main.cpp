@@ -278,8 +278,6 @@ int main() {
     std::cout << "Sun gravity: " << Bodies[0].surfaceGravity << " m/s²" << std::endl;
     std::cout << "Earth gravity: " << Bodies[1].surfaceGravity << " m/s²" << std::endl;
 
-    // Bodies.emplace_back("Mars", 75, 1.5, 9.81f, glm::vec3(100, 0, 0), glm::vec3(0, 0, 3.5), mars);
-
     Shader *atmosphereShader = new Shader("../runtime/shaders/ssbase.vert", "../runtime/shaders/atmosphere.frag");
     Atmosphere::Initialise(atmosphereShader);
 

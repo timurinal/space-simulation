@@ -13,7 +13,7 @@ struct CelestialBody {
 
     double mass;
     double radius;
-    double surfaceGravity;
+    const double surfaceGravity;
 
     glm::dvec3 position;
     glm::dvec3 velocity;
