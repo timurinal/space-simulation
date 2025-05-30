@@ -20,6 +20,7 @@
 #include "celestialBody.h"
 #include "maths.h"
 #include "octahedron.h"
+#include "physics.h"
 #include "shader.h"
 
 glm::ivec2 WindowSize = glm::ivec2(1920, 1080);
@@ -42,10 +43,6 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, GLenum 
                             GLsizei length, const char *message, const void *userParam);
 #endif
 
-std::vector<CelestialBody> Bodies;
-
-std::atomic<double> gTimeScale{1.0}; // 1 = real‑time; 2 = 2× faster; …
-
 GLuint framebuffer = 0;
 GLuint colorBuffer = 0;
 GLuint depthBuffer = 0;
@@ -55,87 +52,6 @@ int RelativeBodyIndex = 0;
 bool RenderGrid = false;
 
 unsigned int RenderMode = 0;
-
-// TODO: abstract physics into a separate class
-std::vector<glm::dvec3> computeAccelerations(const std::vector<glm::dvec3>& positions) {
-    std::vector<glm::dvec3> accelerations(Bodies.size(), glm::dvec3(0));
-
-    for (size_t i = 0; i < Bodies.size(); ++i) {
-        for (size_t j = 0; j < Bodies.size(); ++j) {
-            if (i == j) continue;
-
-            glm::dvec3 dir = positions[j] - positions[i];
-            double sqrDist = glm::length2(dir);
-
-            if (sqrDist > 0.0001) {
-                glm::dvec3 forceDir = glm::normalize(dir);
-                glm::dvec3 force = forceDir * GravitationalConstant *
-                                   (Bodies[i].mass * Bodies[j].mass) / sqrDist;
-
-                accelerations[i] += force / Bodies[i].mass;
-            }
-        }
-    }
-
-    return accelerations;
-}
-
-void updatePhysics() {
-    const double fixedTimeStep = 1.0 / 100;
-    double accumulator = 0.0;
-    auto lastTime = std::chrono::high_resolution_clock::now();
-
-    // Initialise shadow state
-    std::vector<glm::dvec3> positions;
-    std::vector<glm::dvec3> velocities;
-
-    for (const auto& body : Bodies) {
-        positions.push_back(body.position);
-        velocities.push_back(body.velocity);
-    }
-
-    std::vector<glm::dvec3> accelerations = computeAccelerations(positions);
-
-    while (true) {
-        auto now = std::chrono::high_resolution_clock::now();
-        double frameTime = std::chrono::duration<double>(now - lastTime).count();
-        lastTime = now;
-
-        frameTime = std::min(frameTime, 0.05); // cap huge spikes
-        frameTime *= gTimeScale.load(std::memory_order_relaxed);
-        accumulator += frameTime;
-
-        while (accumulator >= fixedTimeStep) {
-            // Kick: update velocity by half-step
-            for (size_t i = 0; i < Bodies.size(); ++i)
-                velocities[i] += accelerations[i] * (fixedTimeStep * 0.5);
-
-            // Drift: update position
-            for (size_t i = 0; i < Bodies.size(); ++i)
-                positions[i] += velocities[i] * fixedTimeStep;
-
-            // Recompute accelerations at new positions
-            std::vector<glm::dvec3> newAccelerations = computeAccelerations(positions);
-
-            // Kick: complete velocity update
-            for (size_t i = 0; i < Bodies.size(); ++i)
-                velocities[i] += newAccelerations[i] * (fixedTimeStep * 0.5);
-
-            // Prepare for next iteration
-            accelerations = std::move(newAccelerations);
-            accumulator -= fixedTimeStep;
-        }
-
-        // Push state back to Bodies (once per frame)
-        for (size_t i = 0; i < Bodies.size(); ++i) {
-            Bodies[i].position = positions[i];
-            Bodies[i].velocity = velocities[i];
-        }
-
-        // Allow background thread to yield
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1)); // Removed to allow the simulation to run at full speed, even if it causes visually laggy results
-    }
-}
 
 int main() {
     if (glfwInit() == GLFW_FALSE) {
@@ -263,7 +179,7 @@ int main() {
 
     stbi_image_free(data);
 
-    Bodies.reserve(10);
+    Physics::Bodies.reserve(10);
 
     Material sun{glm::vec3(1, 1, 0)};
     sun.emissive = true;
@@ -272,11 +188,11 @@ int main() {
     planet.albedoTexture = texture;
     Material mars{glm::vec3(153, 42, 2) / 255.0f};
 
-    Bodies.emplace_back("Sun", 1988470000000000000000000000000.0, 696340.0, glm::dvec3(0), glm::dvec3(0), sun);
-    Bodies.emplace_back("Earth", 5972200000000000000000000.0, 6371.0, glm::dvec3(149597870.7, 0, 0), glm::dvec3(0, 0, mToKm(29783)), planet); // 0,0,5
+    Physics::Bodies.emplace_back("Sun", 1988470000000000000000000000000.0, 696340.0, glm::dvec3(0), glm::dvec3(0), sun);
+    Physics::Bodies.emplace_back("Earth", 5972200000000000000000000.0, 6371.0, glm::dvec3(149597870.7, 0, 0), glm::dvec3(0, 0, mToKm(29783)), planet); // 0,0,5
 
-    std::cout << "Sun gravity: " << Bodies[0].surfaceGravity << " m/s²" << std::endl;
-    std::cout << "Earth gravity: " << Bodies[1].surfaceGravity << " m/s²" << std::endl;
+    std::cout << "Sun gravity: " << Physics::Bodies[0].surfaceGravity << " m/s²" << std::endl;
+    std::cout << "Earth gravity: " << Physics::Bodies[1].surfaceGravity << " m/s²" << std::endl;
 
     Shader *atmosphereShader = new Shader("../runtime/shaders/ssbase.vert", "../runtime/shaders/atmosphere.frag");
     Atmosphere::Initialise(atmosphereShader);
@@ -288,13 +204,12 @@ int main() {
     earthAtmosphereSettings.densityFalloff = 1;
     earthAtmosphereSettings.scatteringStrength = 4;
 
+    Physics::Initialise();
+
     float lastFrameTime = 0;
     float nextFpsUpdateTime = 0;
     int fps = 0;
     float frameTime = 0;
-
-    std::thread fpsLoggerThread(updatePhysics);
-    fpsLoggerThread.detach();
 
     while (!glfwWindowShouldClose(window)) {
         float time = glfwGetTime();
@@ -321,12 +236,13 @@ int main() {
         else if (RenderMode == 1)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-        for (auto &body: Bodies) {
+        // TODO: Helper function for calculating relative positions
+        for (auto &body: Physics::Bodies) {
             body.draw(MainCamera->worldToClip(),
                       MainCamera->Position,
-                      /* lightPosWS */ Bodies[0].position - Bodies[RelativeBodyIndex].position,
+                      /* lightPosWS */ Physics::Bodies[0].position - Physics::Bodies[RelativeBodyIndex].position,
                       /* lightColour*/ glm::vec3(1),
-                      Bodies[RelativeBodyIndex].position);
+                      Physics::Bodies[RelativeBodyIndex].position);
         }
 
         // Render the grid last as it uses transparency
@@ -338,6 +254,7 @@ int main() {
 
             gridShader.bind();
             gridShader.setMat4("proj", MainCamera->getProjectionNearMatrix());
+            gridShader.setMat4("projFar", MainCamera->getProjectionMatrix());
             gridShader.setMat4("inv_proj", MainCamera->getInvProjectionNearMatrix());
             gridShader.setMat4("view", MainCamera->getViewMatrix());
             gridShader.setMat4("inv_view", MainCamera->getInvViewMatrix());
@@ -373,8 +290,8 @@ int main() {
         glfwSwapBuffers(window);
 
         std::ostringstream title;
-        title << frameTime << " ms (" << fps << " fps)  ×" << gTimeScale.load() << " | Rendering relative to body: " <<
-                Bodies[RelativeBodyIndex].name;
+        title << frameTime << " ms (" << fps << " fps)  ×" << Physics::gTimeScale.load() << " | Rendering relative to body: " <<
+                Physics::Bodies[RelativeBodyIndex].name;
         glfwSetWindowTitle(window, title.str().c_str());
     }
 
@@ -454,7 +371,7 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_KP_ADD) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS) {
         if (!plusHeld) {
-            gTimeScale = glm::clamp(gTimeScale.load() + step, 0.0, 5000.0);
+            Physics::gTimeScale = glm::clamp(Physics::gTimeScale.load() + step, 0.0, 5000.0);
             plusHeld = true;
         }
     } else plusHeld = false;
@@ -463,7 +380,7 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_KP_SUBTRACT) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS) {
         if (!minusHeld) {
-            gTimeScale = glm::max(0.0, gTimeScale.load() - step);
+            Physics::gTimeScale = glm::max(0.0, Physics::gTimeScale.load() - step);
             minusHeld = true;
         }
     } else minusHeld = false;
@@ -473,7 +390,7 @@ void processInput(GLFWwindow *window) {
 
     if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
         if (!tabKeyHeld) {
-            RelativeBodyIndex = (RelativeBodyIndex + 1) % Bodies.size();
+            RelativeBodyIndex = (RelativeBodyIndex + 1) % Physics::Bodies.size();
             tabKeyHeld = true;
         }
     } else {

@@ -11,6 +11,8 @@ in vec3 farPoint;
 uniform mat4 proj;
 uniform mat4 view;
 
+uniform mat4 projFar;
+
 uniform float nearPlane;
 uniform float farPlane;
 
@@ -35,7 +37,7 @@ vec4 grid(vec3 fragPos, float scale, bool drawAxisLines) {
 }
 
 float computeDepth(vec3 pos) {
-    vec4 clipSpacePos = proj * view * vec4(pos, 1.0);
+    vec4 clipSpacePos = projFar * view * vec4(pos, 1.0);
     return (clipSpacePos.z / clipSpacePos.w) * 0.5 + 0.5;
 }
 

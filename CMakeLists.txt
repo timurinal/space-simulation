@@ -48,6 +48,8 @@ add_executable(space-simulation src/main.cpp
         src/includes/material.h
         src/includes/atmosphere.h
         src/includes/maths.h
+        src/includes/physics.h
+        src/physics.cpp
 )
 
 if(UNIX)
