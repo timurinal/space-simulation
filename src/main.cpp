@@ -191,6 +191,16 @@ int main() {
     Physics::Bodies.emplace_back("Sun", 1988470000000000000000000000000.0, 696340.0, glm::dvec3(0), glm::dvec3(0), sun);
     Physics::Bodies.emplace_back("Earth", 5972200000000000000000000.0, 6371.0, glm::dvec3(149597870.7, 0, 0), glm::dvec3(0, 0, mToKm(29783)), planet); // 0,0,5
 
+    Material moon{glm::vec3(0.8f)}; // Slightly dimmer than Earth
+
+    glm::dvec3 earthPosition = glm::dvec3(149597870.7, 0, 0);
+    glm::dvec3 earthVelocity = glm::dvec3(0, 0, mToKm(29783));
+
+    glm::dvec3 moonPosition = earthPosition + glm::dvec3(384400.0, 0, 0);
+    glm::dvec3 moonVelocity = earthVelocity + glm::dvec3(0, 0, mToKm(1022));
+
+    Physics::Bodies.emplace_back("Moon", 7.34767309e22, 1737.4, moonPosition, moonVelocity, moon);
+
     std::cout << "Sun gravity: " << Physics::Bodies[0].surfaceGravity << " m/s²" << std::endl;
     std::cout << "Earth gravity: " << Physics::Bodies[1].surfaceGravity << " m/s²" << std::endl;
 

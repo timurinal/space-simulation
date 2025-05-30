@@ -2,7 +2,7 @@
 #define MATHS_H
 
 // --- Central definition ---
-constexpr double SU_IN_KM = 10.0; // 1 SU = 1 km
+constexpr double SU_IN_KM = 100.0; // 1 SU = 1 km
 constexpr double KM_IN_M = 1000.0;
 
 constexpr double GravitationalConstant = 6.67430e-20;
